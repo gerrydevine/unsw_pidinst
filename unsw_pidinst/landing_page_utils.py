@@ -1,7 +1,7 @@
 import datetime
 import os
 from github import Github
-from config import GIT_BRANCH, GITHUB_REPO
+from .config import GIT_BRANCH, GITHUB_REPO
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -158,7 +158,7 @@ def generate_webpage(instrument, use_github):
     ''' Generate a web landing page for an Instrument'''
 
     # OPEN TEMPLATE
-    html = open("instrument/web/templates/template1.html").read()
+    html = open("unsw_pidinst/web/templates/template1.html").read()
 
     # APPEND PUBLICATION DATE
     html = html.replace("__PUBLICATION_DATE__", str(datetime.date.today().year))

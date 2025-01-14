@@ -1,5 +1,5 @@
 import unittest
-from instrument import PIDInst, Identifier, Owner, OwnerIdentifier, Manufacturer, ManufacturerIdentifier, Model, ModelIdentifier, RelatedIdentifier, Instrument
+from unsw_pidinst.instrument import PIDInst, Identifier, Owner, OwnerIdentifier, Manufacturer, ManufacturerIdentifier, Model, ModelIdentifier, RelatedIdentifier, Instrument
 
 
 class TestPIDInsts(unittest.TestCase):
