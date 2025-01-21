@@ -3,12 +3,24 @@ INSTRUMENT_IDENTIFIER_TYPES = [
     'Handle'
 ]
 
+OWNER_TYPES = [
+    'HostingInstitution',
+    'ContactPerson',
+]
+
 OWNER_IDENTIFIER_TYPES = [
-    'ORCID'
+    'ORCID',
+    'ROR',
 ]
 
 MANUFACTURER_IDENTIFIER_TYPES = [
+    'ORCID',
     'URL'
+]
+
+MANUFACTURER_NAME_TYPES = [
+    'Personal',
+    'Organizational'
 ]
 
 RELATED_IDENTIFIER_TYPES = [

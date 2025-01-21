@@ -73,7 +73,7 @@ class TestPIDInsts(unittest.TestCase):
     # INSTRUMENT OWNER TESTS
     def test_valid_owner_object_set_on_init(self):
         owners = []
-        owner = Owner(owner_name="Jane Doe", owner_contact="jane.doe@email.com")
+        owner = Owner(owner_name="Jane Doe", owner_contact="jane.doe@email.com", owner_type="HostingInstitution")
         owner_identifier = OwnerIdentifier(owner_identifier_value="0000-ABCD-1234-WXYZ", owner_identifier_type='ORCID') 
         owner.owner_identifier = owner_identifier
         owners.append(owner)
@@ -84,7 +84,7 @@ class TestPIDInsts(unittest.TestCase):
 
     def test_invalid_non_owner_object_set_on_init(self):
         owners = []
-        owner = {'owner_name':"Jane Doe", 'owner_contact':"jane.doe@email.com"}
+        owner = {'owner_name':"Jane Doe", 'owner_contact':"jane.doe@email.com", 'owner_type': "HostingInstitution"} # Note no identifier set
         owners.append(owner)
 
         with self.assertRaises(TypeError) as exc:
@@ -93,7 +93,7 @@ class TestPIDInsts(unittest.TestCase):
 
     def test_invalid_non_owner_object_set_post_init(self):
         owners = []
-        owner = {'owner_name':"Jane Doe", 'owner_contact':"jane.doe@email.com"}
+        owner = {'owner_name':"Jane Doe", 'owner_contact':"jane.doe@email.com", 'owner_type':"HostingInstitution"}
         owners.append(owner)
         pidinst =  PIDInst(landing_page="https://mylandingpage.com", name='Instrument XYZ', description='A description of this pidinst')        
         self.assertIsInstance(pidinst, PIDInst, 'Something went wrong with class instantation')
@@ -104,7 +104,7 @@ class TestPIDInsts(unittest.TestCase):
 
     def test_valid_owner_object_append(self):
         pidinst =  PIDInst(landing_page="https://mylandingpage.com", name='Instrument XYZ', description='A description of this pidinst')        
-        owner = Owner(owner_name="Jane Doe", owner_contact="jane.doe@email.com")
+        owner = Owner(owner_name="Jane Doe", owner_contact="jane.doe@email.com", owner_type="HostingInstitution")
         owner_identifier = OwnerIdentifier(owner_identifier_value="0000-ABCD-1234-WXYZ", owner_identifier_type='ORCID') 
         owner.owner_identifier = owner_identifier
         pidinst.append_owner(owner)
@@ -122,7 +122,7 @@ class TestPIDInsts(unittest.TestCase):
     # INSTRUMENT MANUFACTURER TESTS
     def test_valid_manufacturer_object_set_on_init(self):
         manufacturers = []
-        manufacturer = Manufacturer(manufacturer_name="Acme Inc")
+        manufacturer = Manufacturer(manufacturer_name="Acme Inc", manufacturer_name_type="Organizational")
         manufacturer_identifier = ManufacturerIdentifier(manufacturer_identifier_value="https://www.acme.com", manufacturer_identifier_type='URL') 
         manufacturer.manufacturer_identifier = manufacturer_identifier
         manufacturers.append(manufacturer)
@@ -134,7 +134,7 @@ class TestPIDInsts(unittest.TestCase):
 
     def test_invalid_non_manufacturer_object_set_on_init(self):
         manufacturers = []
-        manufacturer = {'manufacturer_identifier_valu':"https://www.acme.com", 'manufacturer_identifier_type':'URL'}
+        manufacturer = {'manufacturer_identifier_value':"https://www.acme.com", 'manufacturer_identifier_type':'URL'}
         manufacturers.append(manufacturer)
 
         with self.assertRaises(TypeError) as exc:
@@ -154,7 +154,7 @@ class TestPIDInsts(unittest.TestCase):
 
     def test_valid_manufacturer_object_append(self):
         pidinst =  PIDInst(landing_page="https://mylandingpage.com", name='Instrument XYZ', description='A description of this pidinst')        
-        manufacturer = Manufacturer(manufacturer_name="Acme Inc")
+        manufacturer = Manufacturer(manufacturer_name="Acme Inc", manufacturer_name_type="Organizational")
         manufacturer_identifier = ManufacturerIdentifier(manufacturer_identifier_value="https://www.acme.com", manufacturer_identifier_type='URL') 
         manufacturer.manufacturer_identifier = manufacturer_identifier
         pidinst.append_manufacturer(manufacturer)
@@ -291,22 +291,42 @@ class TestIdentifiers(unittest.TestCase):
 class TestOwners(unittest.TestCase):
 
     def test_valid_owner(self):
-        owner = Owner(owner_name="Jane Doe", owner_contact="jane.doe@email.com")
+        owner = Owner(owner_name="Jane Doe", owner_contact="jane.doe@email.com", owner_type="HostingInstitution")
         owner_identifier = OwnerIdentifier(owner_identifier_value="0000-ABCD-1234-WXYZ", owner_identifier_type='ORCID') 
         owner.owner_identifier = owner_identifier
         self.assertIsInstance(owner, Owner, 'Something went wrong with owner class instantation')
 
     def test_valid_owner_no_identifier(self):
-        owner = Owner(owner_name="Jane Doe", owner_contact="jane.doe@email.com")
+        owner = Owner(owner_name="Jane Doe", owner_contact="jane.doe@email.com", owner_type="HostingInstitution")
         self.assertIsInstance(owner, Owner, 'Something went wrong with owner class instantation')
+
+    def test_invalid_no_owner_name(self):
+        with self.assertRaises(ValueError) as exc:
+            Owner(owner_contact="jane.doe@email.com", owner_type="HostingInstitution")
+        self.assertEqual(str(exc.exception), "owner_name cannot be None")
 
     def test_invalid_empty_owner_name(self):
         with self.assertRaises(ValueError) as exc:
-            Owner(owner_name="", owner_contact="jane.doe@email.com")
+            Owner(owner_name="", owner_contact="jane.doe@email.com", owner_type="HostingInstitution")
         self.assertEqual(str(exc.exception), "Owner name cannot be an empty string")
 
+    def test_invalid_no_owner_type(self):
+        with self.assertRaises(ValueError) as exc:
+            Owner(owner_name="Jane Doe", owner_contact="jane.doe@email.com")
+        self.assertEqual(str(exc.exception), "owner_type cannot be None")
+
+    def test_invalid_empty_owner_type(self):
+        with self.assertRaises(ValueError) as exc:
+            Owner(owner_name="Jane Doe", owner_contact="jane.doe@email.com", owner_type="")
+        self.assertEqual(str(exc.exception), "Owner type cannot be an empty string")
+
+    def test_invalid_owner_type_invalid(self):
+        with self.assertRaises(ValueError) as exc:
+            Owner(owner_name="Jane Doe", owner_contact="jane.doe@email.com", owner_type="Experimenter")
+        self.assertEqual(str(exc.exception), "owner_type is not valid")
+
     def test_invalid_set_owner_identifier(self):
-        owner = Owner(owner_name="Jane Doe", owner_contact="jane.doe@email.com")
+        owner = Owner(owner_name="Jane Doe", owner_contact="jane.doe@email.com", owner_type="HostingInstitution")
         owner_identifier = {'name':'DUMMY'}
         with self.assertRaises(TypeError) as exc:
             owner.owner_identifier = owner_identifier
@@ -334,26 +354,41 @@ class TestOwnerIdentifiers(unittest.TestCase):
 class TestManufacturers(unittest.TestCase):
 
     def test_valid_manufacturer(self):
-        manufacturer = Manufacturer(manufacturer_name="Acme Inc")
+        manufacturer = Manufacturer(manufacturer_name="Acme Inc", manufacturer_name_type="Organizational")
         manufacturer_identifier = ManufacturerIdentifier(manufacturer_identifier_value="https://www.acme.com", manufacturer_identifier_type='URL') 
         manufacturer.manufacturer_identifier = manufacturer_identifier
         self.assertIsInstance(manufacturer, Manufacturer, 'Something went wrong with manufacturer class instantation')
 
     def test_valid_manufacturer_no_identifier(self):
-        manufacturer = Manufacturer(manufacturer_name="Acme Inc")
+        manufacturer = Manufacturer(manufacturer_name="Acme Inc", manufacturer_name_type="Organizational")
         self.assertIsInstance(manufacturer, Manufacturer, 'Something went wrong with manufacturer class instantation')
 
     def test_invalid_manufacturer_empty_name(self):
         with self.assertRaises(ValueError) as exc:
-            Manufacturer(manufacturer_name="")
+            Manufacturer(manufacturer_name="", manufacturer_name_type="Organizational")
         self.assertEqual(str(exc.exception), "manufacturer_name cannot be an empty string")
 
     def test_invalid_set_manufacturer_identifier(self):
-        manufacturer = Manufacturer(manufacturer_name="Acme Inc")
+        manufacturer = Manufacturer(manufacturer_name="Acme Inc", manufacturer_name_type="Organizational")
         manufacturer_identifier = {'value':'DUMMY'}
         with self.assertRaises(TypeError) as exc:
             manufacturer.manufacturer_identifier = manufacturer_identifier
         self.assertEqual(str(exc.exception), "manufacturer_identifier must be instance of ManufacturerIdentifier class")
+
+    def test_invalid_no_manufacturer_name_type(self):
+        with self.assertRaises(ValueError) as exc:
+            Manufacturer(manufacturer_name="Acme Inc")
+        self.assertEqual(str(exc.exception), "manufacturer_name_type cannot be None")
+
+    def test_invalid_empty_manufacturer_name_type(self):
+        with self.assertRaises(ValueError) as exc:
+            Manufacturer(manufacturer_name="Acme Inc", manufacturer_name_type="")
+        self.assertEqual(str(exc.exception), "manufacturer_name_type not recognised")
+
+    def test_invalid_manufacturer_name_type_invalid(self):
+        with self.assertRaises(ValueError) as exc:
+            Manufacturer(manufacturer_name="Acme Inc", manufacturer_name_type="INVALID TYPE")
+        self.assertEqual(str(exc.exception), "manufacturer_name_type not recognised")
 
 
 class TestManufacturerIdentifiers(unittest.TestCase):
@@ -478,12 +513,12 @@ class TestValidations(unittest.TestCase):
         identifier = Identifier(identifier_value="10.1000/retwebwb", identifier_type="DOI")
         pidinst.identifier = identifier
         # Manufacturer
-        manufacturer = Manufacturer(manufacturer_name="Acme Inc")
+        manufacturer = Manufacturer(manufacturer_name="Acme Inc", manufacturer_name_type="Organizational")
         manufacturer_identifier = ManufacturerIdentifier(manufacturer_identifier_value="https://www.acme.com", manufacturer_identifier_type='URL') 
         manufacturer.manufacturer_identifier = manufacturer_identifier
         pidinst.append_manufacturer(manufacturer)
         # Owner
-        owner = Owner(owner_name="Jane Doe", owner_contact="jane.doe@email.com")
+        owner = Owner(owner_name="Jane Doe", owner_contact="jane.doe@email.com", owner_type="HostingInstitution")
         owner_identifier = OwnerIdentifier(owner_identifier_value="0000-ABCD-1234-WXYZ", owner_identifier_type='ORCID') 
         owner.owner_identifier = owner_identifier
         pidinst.append_owner(owner)
@@ -497,12 +532,12 @@ class TestValidations(unittest.TestCase):
             name="Instrument XYZ", 
         )
         # Manufacturer
-        manufacturer = Manufacturer(manufacturer_name="Acme Inc")
+        manufacturer = Manufacturer(manufacturer_name="Acme Inc", manufacturer_name_type="Organizational")
         manufacturer_identifier = ManufacturerIdentifier(manufacturer_identifier_value="https://www.acme.com", manufacturer_identifier_type='URL') 
         manufacturer.manufacturer_identifier = manufacturer_identifier
         pidinst.append_manufacturer(manufacturer)
         # Owner
-        owner = Owner(owner_name="Jane Doe", owner_contact="jane.doe@email.com")
+        owner = Owner(owner_name="Jane Doe", owner_contact="jane.doe@email.com", owner_type="HostingInstitution")
         owner_identifier = OwnerIdentifier(owner_identifier_value="0000-ABCD-1234-WXYZ", owner_identifier_type='ORCID') 
         owner.owner_identifier = owner_identifier
         pidinst.append_owner(owner)
@@ -519,10 +554,32 @@ class TestValidations(unittest.TestCase):
         identifier = Identifier(identifier_value="10.1000/retwebwb", identifier_type="DOI")
         pidinst.identifier = identifier
         # Manufacturer
-        manufacturer = Manufacturer(manufacturer_name="Acme Inc")
+        manufacturer = Manufacturer(manufacturer_name="Acme Inc", manufacturer_name_type="Organizational")
         manufacturer_identifier = ManufacturerIdentifier(manufacturer_identifier_value="https://www.acme.com", manufacturer_identifier_type='URL') 
         manufacturer.manufacturer_identifier = manufacturer_identifier
         pidinst.append_manufacturer(manufacturer)
+
+        self.assertFalse(pidinst.is_valid_pidinst(), 'Something went wrong with PIDInst validation')
+
+    def test_invalid_pidinst_no_owner_type(self):
+        # Initialise Instrument
+        pidinst = PIDInst(
+            landing_page='https://www.landingpage.com', 
+            name="Instrument XYZ", 
+        )
+        # Identifier
+        identifier = Identifier(identifier_value="10.1000/retwebwb", identifier_type="DOI")
+        pidinst.identifier = identifier
+        # Manufacturer
+        manufacturer = Manufacturer(manufacturer_name="Acme Inc", manufacturer_name_type="Organizational")
+        manufacturer_identifier = ManufacturerIdentifier(manufacturer_identifier_value="https://www.acme.com", manufacturer_identifier_type='URL') 
+        manufacturer.manufacturer_identifier = manufacturer_identifier
+        pidinst.append_manufacturer(manufacturer)
+        # Owner
+        owner = Owner(owner_name="Jane Doe", owner_contact="jane.doe@email.com", owner_type="ContactPerson")
+        owner_identifier = OwnerIdentifier(owner_identifier_value="0000-ABCD-1234-WXYZ", owner_identifier_type='ORCID') 
+        owner.owner_identifier = owner_identifier
+        pidinst.append_owner(owner)
 
         self.assertFalse(pidinst.is_valid_pidinst(), 'Something went wrong with PIDInst validation')
 
@@ -539,12 +596,12 @@ class TestInstruments(unittest.TestCase):
         identifier = Identifier(identifier_value="10.1000/retwebwb", identifier_type="DOI")
         instrument.identifier = identifier
         # Manufacturer
-        manufacturer = Manufacturer(manufacturer_name="Acme Inc")
+        manufacturer = Manufacturer(manufacturer_name="Acme Inc", manufacturer_name_type="Organizational")
         manufacturer_identifier = ManufacturerIdentifier(manufacturer_identifier_value="https://www.acme.com", manufacturer_identifier_type='URL') 
         manufacturer.manufacturer_identifier = manufacturer_identifier
         instrument.append_manufacturer(manufacturer)
         # Owner
-        owner = Owner(owner_name="Jane Doe", owner_contact="jane.doe@email.com")
+        owner = Owner(owner_name="Jane Doe", owner_contact="jane.doe@email.com", owner_type ="HostingInstitution")
         owner_identifier = OwnerIdentifier(owner_identifier_value="0000-ABCD-1234-WXYZ", owner_identifier_type='ORCID') 
         owner.owner_identifier = owner_identifier
         instrument.append_owner(owner)

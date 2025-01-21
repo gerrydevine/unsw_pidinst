@@ -8,8 +8,8 @@ import requests
 from .config import DATACITE_URL
 from .datacite_utils import datacite_login, generate_datacite_payload
 from .landing_page_utils import generate_webpage
-from .vocabs import INSTRUMENT_IDENTIFIER_TYPES, OWNER_IDENTIFIER_TYPES, \
-    MANUFACTURER_IDENTIFIER_TYPES, RELATED_IDENTIFIER_TYPES, RELATED_IDENTIFIER_RELATION_TYPES 
+from .vocabs import INSTRUMENT_IDENTIFIER_TYPES, OWNER_TYPES, OWNER_IDENTIFIER_TYPES, \
+    MANUFACTURER_IDENTIFIER_TYPES, MANUFACTURER_NAME_TYPES, RELATED_IDENTIFIER_TYPES, RELATED_IDENTIFIER_RELATION_TYPES 
 
 
 class PIDInst():
@@ -164,6 +164,9 @@ class PIDInst():
         ''' Returns whether or not record is valid PIDInst (all mandatory fields present) '''
 
         if self.identifier and self._schema_version and self.landing_page and self.name and self.owners and self.manufacturers:
+            # Check that at least one owner with owner_type = HostingInstitution
+            if not any(owner.owner_type == 'HostingInstitution' for owner in self.owners):
+                return False
             return True
         
         return False
@@ -256,10 +259,11 @@ class OwnerIdentifier():
 class Owner():
     """ Owner Class """
 
-    def __init__(self, owner_identifier:object = None, owner_name:str = None, owner_contact:str = None):
+    def __init__(self, owner_identifier:object = None, owner_name:str = None, owner_contact:str = None, owner_type:str = None):
         self.owner_identifier = owner_identifier
         self.owner_name = owner_name
         self.owner_contact = owner_contact
+        self.owner_type = owner_type # Note that only an owner_type of 'HostingInstitution' is required for PIDInst
 
     def __str__(self):
         return f'Owner {self.owner_name}'
@@ -305,6 +309,22 @@ class Owner():
                 raise TypeError("owner_contact must be a string")
         self._owner_contact = value
     
+    @property
+    def owner_type(self):
+        return self._owner_type
+    
+    @owner_type.setter
+    def owner_type(self, value):
+        if value is None:
+            raise ValueError("owner_type cannot be None")
+        if not isinstance(value, str):
+            raise TypeError("Owner Type must be a string")  
+        if value == '':
+            raise ValueError("Owner type cannot be an empty string")
+        if value not in OWNER_TYPES:
+            raise ValueError("owner_type is not valid")  
+        self._owner_type = value
+    
 
 class ManufacturerIdentifier():
     """ PIDInst Manufacturer Identifier """
@@ -349,9 +369,10 @@ class ManufacturerIdentifier():
 class Manufacturer():
     """ Manufacturer Class """
 
-    def __init__(self, manufacturer_identifier:object = None, manufacturer_name:str = None):
+    def __init__(self, manufacturer_identifier:object = None, manufacturer_name:str = None, manufacturer_name_type:str = None):
         self.manufacturer_identifier = manufacturer_identifier
         self.manufacturer_name = manufacturer_name
+        self.manufacturer_name_type = manufacturer_name_type
 
     def __str__(self):
         return f'Manufacturer {self.manufacturer_name}'
@@ -386,6 +407,21 @@ class Manufacturer():
         if len(value) >= 200:
             raise ValueError("manufacturer_name must be less than 200 chars")
         self._manufacturer_name = value
+    
+    @property
+    def manufacturer_name_type(self):
+        return self._manufacturer_name_type
+    
+    @manufacturer_name_type.setter
+    def manufacturer_name_type(self, value):
+        if value is None:
+            raise ValueError("manufacturer_name_type cannot be None")
+        if not isinstance(value, str):
+            raise TypeError("manufacturer_name_type must be a string")
+        if value not in MANUFACTURER_NAME_TYPES:
+            raise ValueError("manufacturer_name_type not recognised")
+
+        self._manufacturer_name_type = value
 
 
 class ModelIdentifier():
@@ -555,6 +591,9 @@ class Instrument(PIDInst):
         ''' Returns whether or not record is valid for doi allocation via Datacite '''
 
         if self._schema_version and self.landing_page and self.name and len(self.manufacturers) and len(self.owners) and self.identifier is None:
+            # Check that at least one owner with owner_type = HostingInstitution
+            if not any(owner.owner_type == 'HostingInstitution' for owner in self.owners):
+                return False
             return True
         
         return False
