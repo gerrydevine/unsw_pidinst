@@ -118,6 +118,30 @@ def get_model_html(model):
     return html
 
 
+
+# TODO 
+
+def get_instrument_types_html(instrument_types):
+    ''' Return a html blurb of instrument types details '''
+    
+    html = ''
+    for instrument_type in instrument_types:
+        # Use DOI link if applicable
+        try:
+            if instrument_type.instrument_type_identifier.instrument_type_identifier_type == 'URL':
+                url = instrument_type.instrument_type_identifier.instrument_type_identifier_value
+                instrument_type_html = f"<p><a href='{url}'>{instrument_type.instrument_type_name}</a></p>"
+            else:
+                instrument_type_html = f"<p>{instrument_type.instrument_type_name}</p>"
+
+        except (NameError, AttributeError):
+            instrument_type_html = f"<p>{instrument_type.instrument_type_name}</p>"
+
+        html += instrument_type_html
+
+    return html
+
+
 def get_related_identifiers_html(related_identifiers):
     ''' Return a html blurb of related identifiers details '''
     
@@ -136,6 +160,30 @@ def get_related_identifiers_html(related_identifiers):
             related_identifier_html = f"<p>{related_identifier.related_identifier_value}</p>"
 
         html += related_identifier_html
+
+    return html
+
+
+def get_alternate_identifiers_html(alternate_identifiers):
+    ''' Return a html blurb of alternate identifiers details '''
+    
+    html = ''
+    for alternate_identifier in alternate_identifiers:
+        alternate_identifier_html = f"<p>{alternate_identifier.alternate_identifier_type}: {alternate_identifier.alternate_identifier_value}</p>"
+
+        html += alternate_identifier_html
+
+    return html
+
+
+def get_dates_html(dates):
+    ''' Return a html blurb of dates details '''
+    
+    html = ''
+    for date in dates:
+        date_html = f"<p>{date.date_type}: {date.date_value}</p>"
+
+        html += date_html
 
     return html
 
@@ -171,7 +219,7 @@ def push_to_github(name, filename):
         # Update main index 
         index_contents = repo.get_contents("docs/index.html")
         added_link = f'''
-            <p><a href="{filename.split('.')[0]}">{name}</a></p>
+            <p><a href="instruments/{filename.split('.')[0]}">{name}</a></p>
         '''
         repo.update_file(index_contents.path, "committing files", f"{index_contents.decoded_content.decode()} {added_link}", index_contents.sha, branch=GIT_BRANCH)
 
@@ -231,6 +279,27 @@ def generate_webpage(instrument, use_github):
         html = html.replace("__RELATED_IDENTIFIERS__", related_identifiers_html)
     else:
         html = html.replace("__RELATED_IDENTIFIERS__", '')  
+
+    # SET ALTERNATE IDENTIFIERS
+    if hasattr(instrument, 'alternate_identifiers'):
+        alternate_identifiers_html = get_alternate_identifiers_html(instrument.alternate_identifiers)
+        html = html.replace("__ALTERNATE_IDENTIFIERS__", alternate_identifiers_html)
+    else:
+        html = html.replace("__ALTERNATE_IDENTIFIERS__", '')  
+
+    # SET DATES
+    if hasattr(instrument, 'dates'):
+        dates_html = get_dates_html(instrument.dates)
+        html = html.replace("__DATES__", dates_html)
+    else:
+        html = html.replace("__DATES__", '')  
+
+    # SET INSTRUMENT TYPES
+    if hasattr(instrument, 'instrument_types'):
+        instrument_types_html = get_instrument_types_html(instrument.instrument_types)
+        html = html.replace("__INSTRUMENT_TYPES__", instrument_types_html)
+    else:
+        html = html.replace("__INSTRUMENT_TYPES__", '')  
 
     # # Instrument Inventory Number
     # instrument_inventory_number = next((i for i in instrument_individual_record['api:native']['api:field'] if i['@name'] == "inventory-number"), None)

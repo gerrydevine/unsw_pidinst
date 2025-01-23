@@ -50,7 +50,8 @@ def generate_datacite_payload(pidinst_metadata):
     # SET INSTRUMENT NAME/TITLE (PIDINST NAME TO DATACITE TITLE)
     attrs["titles"] = [
         {
-            "title": pidinst_metadata.name
+            "title": pidinst_metadata.name,
+            "titleType": 'Other'
         }
     ]
 
@@ -187,6 +188,56 @@ def generate_datacite_payload(pidinst_metadata):
             }
         )
 
+
+    # POPULATE RELATED IDENTIFIERS
+    related_identifiers = []
+    for related_identifier in pidinst_metadata.related_identifiers:
+        c = {}
+
+        # Relation Type
+        c["relationType"] = related_identifier.related_identifier_relation_type
+
+        # related identifier Identifier
+        c["relatedIdentifier"] = related_identifier.related_identifier_value
+
+        # related identifier type
+        c["relatedIdentifierType"] = related_identifier.related_identifier_type
+
+        related_identifiers.append(c)
+
+    attrs["relatedIdentifiers"] = related_identifiers
+
+
+    # POPULATE ALTERNATE IDENTIFIERS
+    alternate_identifiers = []
+    for alternate_identifier in pidinst_metadata.alternate_identifiers:
+        c = {}
+
+        # Value
+        c["alternateIdentifier"] = alternate_identifier.alternate_identifier_value
+        # Alternate identifier type
+        c["alternateIdentifierType"] = alternate_identifier.alternate_identifier_type
+
+        alternate_identifiers.append(c)
+
+    attrs["alternateIdentifiers"] = alternate_identifiers
+
+
+    # POPULATE DATES
+    dates = []
+    for date in pidinst_metadata.dates:
+        c = {}
+
+        # Value
+        c["date"] = date.date_value
+        # Date type
+        c["dateType"] = "Other"
+        # Date Information
+        c["dateInformation"] = date.date_type
+
+        dates.append(c)
+
+    attrs["dates"] = dates
 
 
     payload["data"]["attributes"] = attrs

@@ -5,11 +5,15 @@ Research Instrument module following the PIDINST schema
 
 import uuid
 import requests
+import datetime
 from .config import DATACITE_URL
 from .datacite_utils import datacite_login, generate_datacite_payload
 from .landing_page_utils import generate_webpage
+from .utils import validate_date
 from .vocabs import INSTRUMENT_IDENTIFIER_TYPES, OWNER_TYPES, OWNER_IDENTIFIER_TYPES, \
-    MANUFACTURER_IDENTIFIER_TYPES, MANUFACTURER_NAME_TYPES, RELATED_IDENTIFIER_TYPES, RELATED_IDENTIFIER_RELATION_TYPES 
+    MANUFACTURER_IDENTIFIER_TYPES, MANUFACTURER_NAME_TYPES, INSTRUMENT_TYPE_IDENTIFIER_TYPES, \
+        RELATED_IDENTIFIER_TYPES, RELATED_IDENTIFIER_RELATION_TYPES, ALTERNATE_IDENTIFIER_TYPES, \
+        DATE_TYPES 
 
 
 class PIDInst():
@@ -26,7 +30,9 @@ class PIDInst():
     # Current PIDInst schema version
     _schema_version = 1.0
 
-    def __init__(self, identifier:object = None, landing_page:str = None, name:str = None, description:str = None, model:object = None, owners:list = None, manufacturers:list = None, related_identifiers:list = None):
+    def __init__(self, identifier:object = None, landing_page:str = None, name:str = None, description:str = None, model:object = None, 
+                 instrument_types:list = None, owners:list = None, manufacturers:list = None, related_identifiers:list = None, 
+                 alternate_identifiers:list = None, dates: list = None):
         self.identifier = identifier
         self.landing_page = landing_page
         self.name = name
@@ -34,7 +40,10 @@ class PIDInst():
         self.manufacturers = [] if manufacturers is None else manufacturers
         self.description = description
         self.model = model
+        self.instrument_types = [] if instrument_types is None else instrument_types
         self.related_identifiers = [] if related_identifiers is None else related_identifiers
+        self.alternate_identifiers = [] if alternate_identifiers is None else alternate_identifiers
+        self.dates = [] if dates is None else dates
 
     def __str__(self):
         return self.name
@@ -107,6 +116,19 @@ class PIDInst():
         self._model = value
 
     @property
+    def instrument_types(self):
+        return self._instrument_types
+    
+    @instrument_types.setter
+    def instrument_types(self, value):
+        if value is not None:
+            if not isinstance(value, list):
+                raise TypeError("instrument_types must be a list of InstrumentType objects")
+            if not all(isinstance(entry, InstrumentType) for entry in value):
+                raise TypeError("instrument_types must be a list of InstrumentType objects")
+        self._instrument_types = value
+
+    @property
     def owners(self):
         return self._owners
     
@@ -159,6 +181,21 @@ class PIDInst():
         if not isinstance(related_identifier, RelatedIdentifier):
             raise TypeError("related_identifier must be instance of RelatedIdentifier class")
         self.related_identifiers.append(related_identifier)
+
+    def append_alternate_identifier(self, alternate_identifier):          
+        if not isinstance(alternate_identifier, AlternateIdentifier):
+            raise TypeError("alternate_identifier must be instance of AlternateIdentifier class")
+        self.alternate_identifiers.append(alternate_identifier)
+
+    def append_date(self, date):          
+        if not isinstance(date, Date):
+            raise TypeError("date must be instance of Date class")
+        self.dates.append(date)
+
+    def append_instrument_type(self, instrument_type):          
+        if not isinstance(instrument_type, InstrumentType):
+            raise TypeError("instrument_type must be instance of InstrumentType class")
+        self.instrument_types.append(instrument_type)
 
     def is_valid_pidinst(self):
         ''' Returns whether or not record is valid PIDInst (all mandatory fields present) '''
@@ -389,7 +426,6 @@ class Manufacturer():
         if value is not None:
             if not isinstance(value, ManufacturerIdentifier):
                 raise TypeError("manufacturer_identifier must be instance of ManufacturerIdentifier class")
-        # self._owner_identifier = value
         self._manufacturer_identifier = value
     
     @property
@@ -504,6 +540,87 @@ class Model():
         self._model_name = value
 
 
+class InstrumentTypeIdentifier():
+    """ Instrument Type Identifier """
+
+    def __init__(self, instrument_type_identifier_value:str = None, instrument_type_identifier_type:str = None):
+        self.instrument_type_identifier_value = instrument_type_identifier_value
+        self.instrument_type_identifier_type = instrument_type_identifier_type
+
+    def __str__(self):
+        return f'Instrument Type Identifier {self.instrument_type_identifier_value}'
+
+    def __repr__(self):
+        return f"Instrument Type Identifier ('{self.instrument_type_identifier_value}', '{self.instrument_type_identifier_type}')"
+    
+    @property
+    def instrument_type_identifier_value(self):
+        return self._instrument_type_identifier_value
+    
+    @instrument_type_identifier_value.setter
+    def instrument_type_identifier_value(self, value):
+        if value is None:
+            raise ValueError("Instrument Type Identifier Value cannot be None")
+        if not isinstance(value, str):
+            raise TypeError("Instrument Type Identifier Value must be a string")
+        self._instrument_type_identifier_value = value
+    
+    @property
+    def instrument_type_identifier_type(self):
+        return self._instrument_type_identifier_type
+    
+    @instrument_type_identifier_type.setter
+    def instrument_type_identifier_type(self, value):
+        if value is None:
+            raise ValueError("Instrument Type Identifier Type cannot be None")
+        if not isinstance(value, str):
+            raise TypeError("Instrument Type Identifier Type must be a string")
+        if value not in INSTRUMENT_TYPE_IDENTIFIER_TYPES:
+            raise ValueError("instrument_type_identifier_type not recognised")
+        self._instrument_type_identifier_type = value
+
+
+class InstrumentType():
+    """ InstrumentType Class """
+
+    def __init__(self, instrument_type_name:str = None, instrument_type_identifier:object = None):
+        self.instrument_type_name = instrument_type_name
+        self.instrument_type_identifier = instrument_type_identifier
+
+    def __str__(self):
+        return f"Instrument Type {self.instrument_type_name}"
+
+    def __repr__(self):
+        return f"Instrument Type ('{self.instrument_type_name}')"
+    
+    @property
+    def instrument_type_name(self):
+        return self._instrument_type_name
+    
+    @instrument_type_name.setter
+    def instrument_type_name(self, value):
+        if value is None:
+            raise ValueError("instrument_type_name cannot be None")
+        if not isinstance(value, str):
+            raise TypeError("instrument_type_name must be a string")
+        if value == '':
+            raise ValueError("instrument_type_name cannot be an empty string")
+        if len(value) >= 200:
+            raise ValueError("instrument_type_name must be less than 200 chars")
+        self._instrument_type_name = value
+
+    @property
+    def instrument_type_identifier(self):
+        return self._instrument_type_identifier
+    
+    @instrument_type_identifier.setter
+    def instrument_type_identifier(self, value):
+        if value is not None:
+            if not isinstance(value, InstrumentTypeIdentifier):
+                raise TypeError("instrument_type_identifier must be instance of Instrument Type Identifier class")
+        self._instrument_type_identifier = value
+
+
 class RelatedIdentifier():
     """ Related Identifier Class """
 
@@ -576,6 +693,86 @@ class RelatedIdentifier():
                 raise ValueError("related_identifier_name cannot be an empty string")
 
         self._related_identifier_name = value
+
+
+class AlternateIdentifier():
+    """ Alternate Identifier Class """
+
+    def __init__(self, alternate_identifier_value:str = None, alternate_identifier_type:str = None):
+        self.alternate_identifier_value = alternate_identifier_value
+        self.alternate_identifier_type = alternate_identifier_type
+
+    def __str__(self):
+        return f'Alternate Identifier {self.alternate_identifier_value}'
+
+    def __repr__(self):
+        return f"Alternate Identifier ('{self.alternate_identifier_value}')"
+    
+    @property
+    def alternate_identifier_value(self):
+        return self._alternate_identifier_value
+    
+    @alternate_identifier_value.setter
+    def alternate_identifier_value(self, value):
+        if value is None:
+            raise ValueError("alternate_identifier_value cannot be None")
+        if not isinstance(value, str):
+            raise TypeError("alternate_identifier_value must be a string")
+        if value == '':
+            raise ValueError("alternate_identifier_value cannot be an empty string")
+        if len(value) >= 200:
+            raise ValueError("alternate_identifier_value must be less than 200 chars")
+        self._alternate_identifier_value = value
+    
+    @property
+    def alternate_identifier_type(self):
+        return self._alternate_identifier_type
+    
+    @alternate_identifier_type.setter
+    def alternate_identifier_type(self, value):
+        if value is None:
+            raise ValueError("alternate_identifier_type cannot be None")
+        if not isinstance(value, str):
+            raise TypeError("alternate_identifier_type must be a string")
+        if value not in ALTERNATE_IDENTIFIER_TYPES:
+            raise ValueError("Alternate Identifier Type not recognised")
+        self._alternate_identifier_type = value
+
+
+class Date():
+    """ Date Class """
+
+    def __init__(self, date_value:str = None, date_type:str = None):
+        self.date_value = date_value
+        self.date_type = date_type
+
+    def __str__(self):
+        return f'Date {self.date_value}'
+
+    def __repr__(self):
+        return f"Date ('{self.date_value}')"
+    
+    @property
+    def date_value(self):
+        return self._date_value
+    
+    @date_value.setter
+    def date_value(self, value):
+        if value is None:
+            raise ValueError("date_value cannot be None")
+        if not validate_date(value):
+            raise ValueError("date_value not formatted correctly")
+        self._date_value = value
+        
+    @property
+    def date_type(self):
+        return self._date_type
+    
+    @date_type.setter
+    def date_type(self, value):
+        if value not in DATE_TYPES:
+            raise ValueError("Date Type not recognised")
+        self._date_type = value
 
 
 class Instrument(PIDInst):

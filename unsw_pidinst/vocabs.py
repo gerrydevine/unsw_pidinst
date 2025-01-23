@@ -3,6 +3,12 @@ INSTRUMENT_IDENTIFIER_TYPES = [
     'Handle'
 ]
 
+INSTRUMENT_TYPE_IDENTIFIER_TYPES = [
+    'URL',
+    'DOI',
+    'Handle'
+]
+
 OWNER_TYPES = [
     'HostingInstitution',
     'ContactPerson',
@@ -56,5 +62,19 @@ RELATED_IDENTIFIER_RELATION_TYPES = [
     'HasMetadata',
     'WasUsedIn',
     'IsIdenticalTo',
-    'IsAttachedTo'
+    'IsAttachedTo',
+    'IsDerivedFrom',
+    'IsSourceOf',
+    'Collects'
+]
+
+ALTERNATE_IDENTIFIER_TYPES = [
+    'SerialNumber',
+    'InventoryNumber',
+    'Other'
+]
+
+DATE_TYPES = [ 
+    "Commissioned",
+    "DeCommissioned"
 ]
