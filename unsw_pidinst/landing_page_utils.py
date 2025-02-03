@@ -1,7 +1,8 @@
 import datetime
 import os
 from github import Github
-from .config import GIT_BRANCH, GITHUB_REPO
+import pandas as pd
+# from ..config import GIT_BRANCH, GITHUB_REPO
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -153,6 +154,10 @@ def get_related_identifiers_html(related_identifiers):
                 doi = related_identifier.related_identifier_value
                 relation = related_identifier.related_identifier_relation_type
                 related_identifier_html = f"<p>{relation}: <a href='https://doi.org/{doi}'>{doi} {DOI_LOGO}</a></p>"
+            elif related_identifier.related_identifier_type == 'URL' and related_identifier.related_identifier_value:
+                url = related_identifier.related_identifier_value
+                relation = related_identifier.related_identifier_relation_type
+                related_identifier_html = f"<p>{relation}: <a href='{url}'>{url}</a></p>"
             else:
                 related_identifier_html = f"<p>{related_identifier.related_identifier_value}</p>"
 
@@ -181,19 +186,20 @@ def get_dates_html(dates):
     
     html = ''
     for date in dates:
-        date_html = f"<p>{date.date_type}: {date.date_value}</p>"
+        # date_html = f"<p>{date.date_type}: {date.date_value}</p>"
+        date_html = f"<p>{date.date_type}: {pd.to_datetime(str(date.date_value)).strftime('%Y-%m-%d')}</p>"
 
         html += date_html
 
     return html
 
 
-def push_to_github(name, filename):
+def push_to_github(name, filename, git_branch, github_repo):
     ''' Push webpage to github pages '''
 
     token = os.environ.get('GITHUB_ACCESS_TOKEN')
     g = Github(token)
-    repo = g.get_user().get_repo(GITHUB_REPO)
+    repo = g.get_user().get_repo(github_repo)
 
     all_files = []
     contents = repo.get_contents("")
@@ -212,20 +218,26 @@ def push_to_github(name, filename):
     # Upload or replace on github
     if f"docs/instruments/{filename}" in all_files:
         repo_contents = repo.get_contents(f"docs/instruments/{filename}")
-        repo.update_file(repo_contents.path, "committing files", content, repo_contents.sha, branch=GIT_BRANCH)
+        repo.update_file(repo_contents.path, "committing files", content, repo_contents.sha, branch=git_branch)
     else:
-        repo.create_file(f"docs/instruments/{filename}", "committing files", content, branch=GIT_BRANCH)
+        repo.create_file(f"docs/instruments/{filename}", "committing files", content, branch=git_branch)
         
         # Update main index 
         index_contents = repo.get_contents("docs/index.html")
         added_link = f'''
             <p><a href="instruments/{filename.split('.')[0]}">{name}</a></p>
         '''
-        repo.update_file(index_contents.path, "committing files", f"{index_contents.decoded_content.decode()} {added_link}", index_contents.sha, branch=GIT_BRANCH)
+        repo.update_file(index_contents.path, "committing files", f"{index_contents.decoded_content.decode()} {added_link}", index_contents.sha, branch=git_branch)
 
 
-def generate_webpage(instrument, use_github):
+def generate_instrument_webpage(instrument, git_branch, github_repo, use_github):
     ''' Generate a web landing page for an Instrument'''
+
+    if not git_branch:
+        raise AttributeError('You must supply a Git Branch')
+
+    if not github_repo:
+        raise AttributeError('You must supply a Github Repo name')
 
     # OPEN TEMPLATE
     # html = open("unsw_pidinst/web/templates/template1.html").read()
@@ -332,6 +344,6 @@ def generate_webpage(instrument, use_github):
         fp.write(html)
 
     if use_github:
-        push_to_github(instrument.name, f"{instrument.local_id}.html")
+        push_to_github(instrument.name, f"{instrument.local_id}.html", git_branch, github_repo)
 
     

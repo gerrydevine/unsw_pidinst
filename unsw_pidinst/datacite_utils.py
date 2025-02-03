@@ -1,8 +1,9 @@
 import os
 import datetime
+import pandas as pd
 from dotenv import load_dotenv
 from base64 import b64encode
-from .config import DOI_PREFIX
+# from .config import DOI_PREFIX
 
 load_dotenv()
 
@@ -19,8 +20,11 @@ def datacite_login():
     return f"Basic {datacite_token}"
 
 
-def generate_datacite_payload(pidinst_metadata):
+def generate_datacite_payload(pidinst_metadata, doi_prefix=None):
     ''' Map PIDInst metadata to a Datacite-friendly payload '''
+
+    if not doi_prefix:
+        raise AttributeError('You just provide a DOI prefix value')
 
     # Create new skeleton object to store instrument payload
     payload = {}
@@ -31,7 +35,7 @@ def generate_datacite_payload(pidinst_metadata):
     attrs = {}
 
     # SET DOI PREFIX
-    attrs["prefix"] = DOI_PREFIX
+    attrs["prefix"] = doi_prefix
 
     # SET PUBLISHER (DEFAULTING TO UNSW)
     attrs["publisher"] = {
@@ -229,7 +233,8 @@ def generate_datacite_payload(pidinst_metadata):
         c = {}
 
         # Value
-        c["date"] = date.date_value
+        # c["date"] = date.date_value    
+        c['date'] = pd.to_datetime(str(date.date_value)).strftime('%Y-%m-%d')
         # Date type
         c["dateType"] = "Other"
         # Date Information

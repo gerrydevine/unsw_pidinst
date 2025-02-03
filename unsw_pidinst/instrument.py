@@ -5,10 +5,9 @@ Research Instrument module following the PIDINST schema
 
 import uuid
 import requests
-import datetime
-from .config import DATACITE_URL
+import pandas as pd
 from .datacite_utils import datacite_login, generate_datacite_payload
-from .landing_page_utils import generate_webpage
+from .landing_page_utils import generate_instrument_webpage
 from .utils import validate_date
 from .vocabs import INSTRUMENT_IDENTIFIER_TYPES, OWNER_TYPES, OWNER_IDENTIFIER_TYPES, \
     MANUFACTURER_IDENTIFIER_TYPES, MANUFACTURER_NAME_TYPES, INSTRUMENT_TYPE_IDENTIFIER_TYPES, \
@@ -760,7 +759,8 @@ class Date():
     def date_value(self, value):
         if value is None:
             raise ValueError("date_value cannot be None")
-        if not validate_date(value):
+        # if not validate_date(pd.to_datetime(str(date['Date_Value'].values[0])).strftime('%Y-%m-%d')):
+        if not validate_date(pd.to_datetime(str(value)).strftime('%Y-%m-%d')):
             raise ValueError("date_value not formatted correctly")
         self._date_value = value
         
@@ -795,7 +795,7 @@ class Instrument(PIDInst):
         
         return False
 
-    def allocate_doi(self):
+    def allocate_doi(self, doi_prefix, datacite_url=None):
         ''' Allocate a new DOI identifier to this Instrument ''' 
 
         # Check if an identifier already exists and exit if so
@@ -805,10 +805,12 @@ class Instrument(PIDInst):
         if not self.is_valid_for_doi():
             raise ValueError("This record does not yet have sufficient content to allocate a DOI")
         
+        if not datacite_url:
+            raise AttributeError("You need to provide a valid datacite url")
+        
         # Set up Datacite POST parameters 
         datacite_token = datacite_login()
-        url = DATACITE_URL
-        datacite_payload = generate_datacite_payload(self)
+        datacite_payload = generate_datacite_payload(self, doi_prefix)
 
         headers = {
             "accept": "application/vnd.api+json",
@@ -817,7 +819,7 @@ class Instrument(PIDInst):
         }
 
         try:
-            resp = requests.post(url, json=datacite_payload, headers=headers) 
+            resp = requests.post(datacite_url, json=datacite_payload, headers=headers) 
             resp.raise_for_status()
         except requests.exceptions.HTTPError as err:
             raise SystemExit(err)
@@ -826,7 +828,7 @@ class Instrument(PIDInst):
         self.identifier = identifier
 
 
-    def generate_webpage(self, use_github=False):
+    def generate_webpage(self, git_branch, github_repo, use_github=False):
         ''' Generate a web landing page'''
 
-        generate_webpage(self, use_github)
+        generate_instrument_webpage(self, git_branch, github_repo, use_github)

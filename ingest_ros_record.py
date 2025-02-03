@@ -1,34 +1,70 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 
-"""Module documentation goes here."""
-
-# from __future__ import print_function
+""" Ingest instrument information from a nominated ROS record and allocate PIDInst DOI 
+"""
 
 __author__ = "Gerry Devine"
 
+
 import pandas as pd
+from ros_utils import ros_login, get_ros_record_by_id
 from unsw_pidinst.instrument import Identifier, Instrument, Owner, OwnerIdentifier, Manufacturer, ManufacturerIdentifier, \
     Model, ModelIdentifier, RelatedIdentifier, InstrumentType, InstrumentTypeIdentifier, AlternateIdentifier, Date 
 
 
-def read_excel_with_tabs(file_path):
-    """
-    Reads an Excel spreadsheet with multiple tabs and returns a dictionary of DataFrames.
+ROS_EQUIPMENT_ID = 'E35F45EF-4ADC-453F-8F20-EB85B714FD63'
 
-    Parameters:
-        file_path (str): The path to the Excel file.
 
-    Returns:
-        dict: A dictionary where the keys are sheet names and the values are DataFrames.
-    """
-    try:
-        # Use pandas to read the Excel file with all sheets
-        sheets = pd.read_excel(file_path, sheet_name=None)
-        return sheets
-    except Exception as e:
-        print(f"An error occurred while reading the Excel file: {e}")
-        return None
+def handle_creators(instrument_creators, token):
+    if isinstance(instrument_creators, dict):
+        newlist = []
+        newlist.append(instrument_creators)
+        instrument_creators = newlist
+
+    creators = []
+    for creator in instrument_creators:
+        c = {}
+
+        c["name"] = f"{creator['api:people']['api:person']['api:last-name']}, {creator['api:people']['api:person']['api:first-names']}"
+        c["givenName"] = f"{creator['api:people']['api:person']['api:first-names']}"
+        c["familyName"] = f"{creator['api:people']['api:person']['api:last-name']}"
+        c["nameType"] = "Personal"
+
+        # Get ORCID, if existing
+        if creator['api:people']['api:person'].get('api:links'):
+            link_url = creator['api:people']['api:person']['api:links']['api:link']['@href']
+            headers = {'Authorization': token}
+            response = requests.request("GET", link_url, headers=headers)
+            time.sleep(1)
+            data = xmltodict.parse(response.content)
+            identifiers = data['api:response']['api:result']['api:object']['api:user-identifier-associations']['api:user-identifier-association']
+            orcid_entry = next((i for i in identifiers if i['@scheme'] == "orcid"), None)
+
+            if orcid_entry:
+                c['nameIdentifiers'] = []
+                c['nameIdentifiers'].append(
+                    	{
+							"nameIdentifier": f"https://orcid.org/{orcid_entry['#text']}",
+							"nameIdentifierScheme": "ORCID",
+							"schemeUri": "https://orcid.org"
+						}
+                )
+
+        # Add Affiliation
+        c["affiliation"] = [
+            {
+              "affiliationIdentifier": "https://ror.org/03r8z3t63",
+              "affiliationIdentifierScheme": "ROR",
+              "name": "UNSW Sydney",
+              "schemeUri": "https://ror.org/"
+            }
+        ]
+
+        creators.append(c)
+
+    return creators
+
+
     
 
 def handle_owner(owner_id):
@@ -161,14 +197,45 @@ def handle_date(date_id):
     return date_1
 
 
-# READ IN SPREADSHEET
-file_path = 'Instrument_Batch_1.xlsx'
-data = read_excel_with_tabs(file_path)
-for sheet_name, df in data.items():
-    globals()[f"{sheet_name.replace(" ", "_").lower()}_df"] = df
+def generate_pidinst(instrument_individual_record):
+    ''' Generate a PIDINST record from ros information '''
 
-# Loop through main instruments dataframe
-for index, row in instruments_df.iterrows():
+    # GET INSTRUMENT NAME/TITLE AND INSTANTIATE NEW INSTRUMENT MODEL
+    instrument_name = next((i for i in instrument_individual_record['api:native']['api:field'] if i['@name'] == "name"), None)
+    assert instrument_name is not None, 'Instrument name cannot be None'
+    instrument_1 = Instrument(name=instrument_name['api:text'])
+
+    # SET INSTRUMENT OWNER/CONTRIBUTOR (HOSTING INSTITUTION)
+
+    # instrument_creators = next((i for i in instrument_individual_record['api:native']['api:field'] if i['@name'] == "contacts"), None)
+    hosting_instititution_name = next((i for i in instrument_individual_record['api:native']['api:field'] if i['@name'] == "contacts"), None)
+    if instrument_creators:
+        creators = handle_creators(instrument_creators, ros_token)
+        attrs["creators"] = creators
+    else:
+        print(f"Instrument Contacts = None")
+
+    # SET DESCRIPTION
+    instrument_description = next((i for i in instrument_individual_record['api:native']['api:field'] if i['@name'] == "description"), None)
+    if instrument_description:
+        print(f"Instrument Description = {instrument_description['api:text']}")
+
+    attrs["descriptions"] = []
+    attrs["descriptions"].append(
+        {
+            "lang": "en-US",
+            "description": instrument_description['api:text'],
+            "descriptionType": "Abstract"
+        }
+    )
+
+
+
+
+
+
+
+
     # Instrument Name
     print('')
     print(f"Instrument Name = {row['Name']}")
@@ -249,5 +316,41 @@ for index, row in instruments_df.iterrows():
     instrument_1.landing_page = f"https://gerrydevine.github.io/instrument-catalogue/instruments/{instrument_1.local_id}"
     instrument_1.generate_webpage(use_github=True)
 
-print('Done')
+
+def get_ros_instrument_info(ros_intrument_id, ros_token):
+    ''' Retrieve information about an instrument in ROS '''
+
+    # GET ROS RECORD BY ID
+    record_info = get_ros_record_by_id(ros_intrument_id, ros_token)
+    ros_instrument_info = record_info['api:response']['api:result']['api:object']
+
+    # GET INDIVIDUAL INSTRUMENT MANUAL SOURCE RECORD
+    assert isinstance(ros_instrument_info['api:records']['api:record'], dict), 'Error: Multiple sources found!'
+    assert ros_instrument_info['api:records']['api:record']['@source-name'] == 'manual', "Source is not of type 'Manual'"
+
+    instrument_individual_record = ros_instrument_info['api:records']['api:record']
+
+    return instrument_individual_record
+
+
+def main():
+        
+    # LOG IN TO ROS
+    ros_token = ros_login()
+
+    # PULL INFO FROM ROS INSTRUMENT RECORD
+    ros_instrument_info = get_ros_instrument_info(ROS_EQUIPMENT_ID, ros_token)
+
+    # GENERATE PIDINST RECORD AND LANDING PAGE
+    generate_pidinst(ros_instrument_info)
+
+
+
+    print('Done!')
+
+
+
+if __name__ == "__main__":
+    """ This is executed when run from the command line """
+    main()
     

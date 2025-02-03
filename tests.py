@@ -1,5 +1,8 @@
 import unittest
 from unsw_pidinst.instrument import PIDInst, Identifier, Owner, OwnerIdentifier, Manufacturer, ManufacturerIdentifier, Model, ModelIdentifier, RelatedIdentifier, Instrument
+# from config import DATACITE_URL
+
+TEST_DATACITE_URL = 'https://dummydatacite.com'   # This won't be used
 
 
 class TestPIDInsts(unittest.TestCase):
@@ -617,7 +620,7 @@ class TestInstruments(unittest.TestCase):
         )
         instrument.identifier = identifier
         with self.assertRaises(ValueError) as exc:
-            instrument.allocate_doi()
+            instrument.allocate_doi(TEST_DATACITE_URL)
         self.assertEqual(str(exc.exception), "This Instrument record already has an identifier allocated")
    
     def test_allocate_doi_non_complete_info(self):
@@ -626,7 +629,7 @@ class TestInstruments(unittest.TestCase):
             name="Instrument XYZ"
         )
         with self.assertRaises(ValueError) as exc:
-            instrument.allocate_doi()
+            instrument.allocate_doi(TEST_DATACITE_URL)
         self.assertEqual(str(exc.exception), "This record does not yet have sufficient content to allocate a DOI")
    
     def test_allocate_doi_complete_info(self):
