@@ -228,7 +228,9 @@ def push_to_github(name, filename, git_branch, github_repo, delete_local=True):
         added_link = f'''
             <p><a href="instruments/{filename.split('.')[0]}">{name}</a></p>
         '''
-        repo.update_file(index_contents.path, "committing files", f"{index_contents.decoded_content.decode()} {added_link}", index_contents.sha, branch=git_branch)
+        html_split = index_contents.decoded_content.decode().split('<div id="break"></div>')
+
+        repo.update_file(index_contents.path, "committing files", f'{html_split[0]} {added_link} {html_split[1]} <div id="break"></div>', index_contents.sha, branch=git_branch)
 
     # Delete local file
     if delete_local:
