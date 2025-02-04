@@ -2,6 +2,7 @@ import datetime
 import os
 from github import Github
 import pandas as pd
+import pkg_resources
 # from ..config import GIT_BRANCH, GITHUB_REPO
 from dotenv import load_dotenv
 
@@ -241,7 +242,9 @@ def generate_instrument_webpage(instrument, git_branch, github_repo, use_github)
 
     # OPEN TEMPLATE
     # html = open("unsw_pidinst/web/templates/template1.html").read()
-    html = open("unsw_pidinst/web/templates/template1.html").read()
+    # html = open("unsw_pidinst/web/templates/template1.html").read()
+    template_file = pkg_resources.resource_filename('unsw_pidinst', 'web/templates/template1.html')
+    html = open(template_file).read()
 
     # APPEND PUBLICATION DATE
     html = html.replace("__PUBLICATION_DATE__", str(datetime.date.today().year))
