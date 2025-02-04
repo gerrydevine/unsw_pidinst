@@ -195,7 +195,7 @@ def get_dates_html(dates):
     return html
 
 
-def push_to_github(name, filename, git_branch, github_repo):
+def push_to_github(name, filename, git_branch, github_repo, delete_local=True):
     ''' Push webpage to github pages '''
 
     token = os.environ.get('GITHUB_ACCESS_TOKEN')
@@ -229,6 +229,10 @@ def push_to_github(name, filename, git_branch, github_repo):
             <p><a href="instruments/{filename.split('.')[0]}">{name}</a></p>
         '''
         repo.update_file(index_contents.path, "committing files", f"{index_contents.decoded_content.decode()} {added_link}", index_contents.sha, branch=git_branch)
+
+    # Delete local file
+    if delete_local:
+        os.remove(filename)
 
 
 def generate_instrument_webpage(instrument, git_branch, github_repo, use_github):
